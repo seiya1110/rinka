@@ -140,14 +140,15 @@
   }
   .seg-label{
     position:absolute; top:50%; left:50%;
-    width:64px; margin-left:-32px;
-    transform-origin:50% 0%;
-    text-align:center;
-    font-weight:900; font-size:11px;
-    color:#fff;
-    text-shadow:0 1px 3px rgba(0,0,0,.35);
+    width:0; height:0;
+    transform-origin:0 0;
   }
-  .seg-label .ic{ display:block; font-size:24px; line-height:1; margin-bottom:2px; }
+  .seg-label .ic{
+    position:absolute; left:0; top:0;
+    transform:translate(-50%,-50%);
+    display:block; font-size:32px; line-height:1;
+    filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));
+  }
   .hub{
     position:absolute; top:50%; left:50%; width:22%; height:22%;
     margin:-11% 0 0 -11%;
@@ -377,13 +378,25 @@ function buildWheel(){
   SEGMENTS.forEach((s,i)=>{
     const label = document.createElement('div');
     label.className = 'seg-label';
-    const angle = i*SEG_ANGLE + SEG_ANGLE/2;
-    label.style.transform = `rotate(${angle}deg) translateY(14px)`;
-    label.innerHTML = `<span class="ic">${s.icon}</span>${s.label}`;
+    label.innerHTML = `<span class="ic">${s.icon}</span>`;
     wheelEl.appendChild(label);
   });
 }
 buildWheel();
+
+// アイコンを盤面の外寄りに配置する（ホイールの実サイズに応じて再計算）
+function positionSegLabels(){
+  const radius = wheelEl.clientWidth / 2;
+  if(!radius) return;
+  const outerR = radius * 0.68; // 中心からの距離：外寄り
+  document.querySelectorAll('#wheel .seg-label').forEach((label, i)=>{
+    const angle = i*SEG_ANGLE + SEG_ANGLE/2;
+    label.style.transform = `rotate(${angle}deg) translateY(${outerR}px)`;
+  });
+}
+positionSegLabels();
+window.addEventListener('resize', positionSegLabels);
+window.addEventListener('orientationchange', ()=> setTimeout(positionSegLabels, 200));
 
 /* ===================== 紙吹雪エフェクト ===================== */
 const fxLayer = document.getElementById('fx-layer');
