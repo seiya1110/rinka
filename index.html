@@ -7,10 +7,11 @@
     <style>
         body {
             font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #1a1a2e;
+            color: #fff;
             text-align: center;
-            background-color: #f0f2f5;
-            margin: 0;
             padding: 20px;
+            margin: 0;
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -18,20 +19,70 @@
             min-height: 100vh;
         }
         h1 {
-            color: #333;
+            color: #e94560;
             margin-bottom: 10px;
         }
+        .container {
+            width: 100%;
+            max-width: 400px;
+            background-color: #16213e;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            box-sizing: border-box;
+        }
+        /* 一番最初のルーレットコンテナの再現 */
         .roulette-container {
             position: relative;
-            margin: 20px auto;
-            width: 320px;
-            height: 320px;
+            width: 260px;
+            height: 260px;
+            margin: 30px auto;
         }
-        canvas {
+        /* 一番最初の極上なめらかイージングの再現 */
+        .wheel {
+            width: 100%;
+            height: 100%;
             border-radius: 50%;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border: 5px solid #fff;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.3);
+            /* 当たり🎯(5つ)とはずれ❌(5つ)を交互に10分割（36度ずつ）表現したグラデーション */
+            background: conic-gradient(
+                #e94560 0deg 36deg,    #3a6cb4 36deg 72deg,
+                #e94560 72deg 108deg,  #3a6cb4 108deg 144deg,
+                #e94560 144deg 180deg, #3a6cb4 180deg 216deg,
+                #e94560 216deg 252deg, #3a6cb4 252deg 288deg,
+                #e94560 288deg 324deg, #3a6cb4 324deg 360deg
+            );
+            position: relative;
         }
-        /* 上部の矢印（針） */
+        /* 高速回転中のアニメーションクラス（クラスON/OFFで制御） */
+        .wheel.spinning {
+            animation: fast-spin 0.2s linear infinite;
+        }
+        /* STOPを押した後の減速設定（一番最初のコードの数値を完全再現） */
+        .wheel.stopping {
+            transition: transform 3s cubic-bezier(0.1, 0.8, 0.1, 1);
+        }
+        /* マス目の中の絵文字テキスト */
+        .wheel-text {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            top: 0;
+            left: 0;
+        }
+        .segment-label {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transform-origin: 50% 50%;
+            font-size: 18px;
+            padding-top: 15px;
+            box-sizing: border-box;
+            font-weight: bold;
+        }
+        /* 一番最初の矢印（針）の再現 */
         .pointer {
             position: absolute;
             top: -15px;
@@ -41,40 +92,44 @@
             height: 0;
             border-left: 15px solid transparent;
             border-right: 15px solid transparent;
-            border-top: 25px solid #ff3b30;
+            border-top: 25px solid #fff;
             z-index: 10;
         }
-        #stopButton {
-            background-color: #ff3b30;
+        /* ボタンのスタイル */
+        .btn {
+            background-color: #e94560;
             color: white;
             border: none;
-            padding: 15px 40px;
+            padding: 12px 45px;
             font-size: 20px;
             font-weight: bold;
-            border-radius: 30px;
+            border-radius: 25px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: background-color 0.2s, transform 0.1s;
-            margin-top: 20px;
+            box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
+            transition: 0.2s;
+            margin-top: 10px;
         }
-        #stopButton:active {
-            transform: scale(0.95);
-        }
-        #stopButton:disabled {
-            background-color: #ccc;
+        .btn:disabled {
+            background-color: #555;
+            box-shadow: none;
             cursor: not-allowed;
         }
-        #result {
-            font-size: 28px;
+        .result {
+            font-size: 24px;
             font-weight: bold;
-            color: #333;
-            margin-top: 20px;
-            height: 40px;
+            margin-top: 25px;
+            min-height: 33px;
+            color: #00f5ff;
         }
         .info {
-            font-size: 14px;
-            color: #666;
-            margin-top: 10px;
+            font-size: 13px;
+            color: #888;
+            margin-top: 5px;
+            margin-bottom: 15px;
+        }
+        @keyframes fast-spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(-360deg); }
         }
     </style>
 </head>
@@ -82,32 +137,26 @@
 
     <h1>QRコード連動ルーレット</h1>
     <div id="debug-id" class="info"></div>
-
-    <div class="roulette-container">
-        <div class="pointer"></div>
-        <canvas id="wheel" width="320" height="320"></canvas>
+    
+    <div class="container">
+        <div class="roulette-container">
+            <div class="pointer"></div>
+            <div id="wheel" class="wheel">
+                <!-- 10マスのテキストをJavaScriptで自動生成して配置します -->
+                <div id="wheel-text" class="wheel-text"></div>
+            </div>
+        </div>
+        <button id="stop-btn" class="btn" onclick="stopRoulette()" disabled>STOP</button>
+        <div id="roulette-result" class="result">読み込み中...</div>
     </div>
 
-    <button id="stopButton" disabled>STOP</button>
-    <div id="result"></div>
-
     <script>
-        // 景品の設定（当たり5つ、はずれ5つの交互10マス）
+        // 当たり5つ、はずれ5つの交互10マス構成
         const prizes = ["当たり🎯", "はずれ❌", "当たり🎯", "はずれ❌", "当たり🎯", "はずれ❌", "当たり🎯", "はずれ❌", "当たり🎯", "はずれ❌"];
-        const colors = ["#ff7675", "#dfe6e9", "#ff7675", "#dfe6e9", "#ff7675", "#dfe6e9", "#ff7675", "#dfe6e9", "#ff7675", "#dfe6e9"];
-
-        const canvas = document.getElementById("wheel");
-        const ctx = canvas.getContext("2d");
-        const stopButton = document.getElementById("stopButton");
-        const resultDiv = document.getElementById("result");
-
-        let currentAngle = 0; // 現在の回転角度（ラジアン）
-        let speed = 0;        // 回転速度
-        let isSpinning = false;
-        let isStopping = false;
-        let targetIndex = 0;  // 停止させる狙いのマスのインデックス
-        let stopTimer = 0;
-        let totalStopDuration = 4000; // STOPを押してから止まるまでの時間（4秒）
+        
+        const wheel = document.getElementById('wheel');
+        const stopBtn = document.getElementById('stop-btn');
+        const resultDiv = document.getElementById('roulette-result');
 
         // URLから「?id=xxx」を取得する処理
         function getQrId() {
@@ -132,111 +181,67 @@
             return hash;
         }
 
-        // IDに基づいて結果を完全固定
+        // IDに基づいて「どのマスで止まるか」を事前に完全固定
         const hash = hashCode(qrId);
-        targetIndex = Math.abs(hash) % prizes.length;
+        const targetIndex = Math.abs(hash) % prizes.length;
 
-        // ルーレットの盤面を描画
-        function drawWheel() {
+        // ルーレットの盤面に絵文字を配置する初期化処理
+        function initWheelLabels() {
+            const container = document.getElementById('wheel-text');
             const numSegments = prizes.length;
-            const arcSize = (2 * Math.PI) / numSegments;
-
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            const angleStep = 360 / numSegments;
 
             for (let i = 0; i < numSegments; i++) {
-                const angle = currentAngle + (i * arcSize);
-                
-                // セグメント（扇形）の描画
-                ctx.beginPath();
-                ctx.fillStyle = colors[i];
-                ctx.moveTo(160, 160);
-                ctx.arc(160, 160, 160, angle, angle + arcSize);
-                ctx.lineTo(160, 160);
-                ctx.fill();
-                ctx.strokeStyle = "#ffffff"; 
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                // テキスト（絵文字）の描画
-                ctx.save();
-                ctx.translate(160, 160);
-                ctx.rotate(angle + arcSize / 2);
-                ctx.textAlign = "right";
-                ctx.fillStyle = "#333";
-                ctx.font = "bold 16px Arial";
-                ctx.fillText(prizes[i], 145, 6);
-                ctx.restore();
+                const label = document.createElement('div');
+                label.className = 'segment-label';
+                // 各マス目の中心に文字が来るように回転させて配置
+                label.style.transform = `rotate(${i * angleStep + (angleStep / 2)}deg)`;
+                label.innerText = prizes[i];
+                container.appendChild(label);
             }
-        }
-
-        // メインのアニメーションループ（最初のスムーズなイージング仕様）
-        function updateAnimation(timestamp) {
-            if (!isSpinning) return;
-
-            if (isStopping) {
-                if (!stopTimer) stopTimer = timestamp;
-                let elapsed = timestamp - stopTimer;
-
-                if (elapsed >= totalStopDuration) {
-                    isSpinning = false;
-                    isStopping = false;
-                    speed = 0;
-                    stopButton.disabled = true;
-
-                    // 完全に目標位置に固定
-                    const arcSize = (2 * Math.PI) / prizes.length;
-                    currentAngle = -Math.PI / 2 - (targetIndex * arcSize) - (arcSize / 2);
-                    drawWheel();
-
-                    resultDiv.innerText = `結果は 【${prizes[targetIndex]}】 です！`;
-                    return;
-                }
-
-                // 初期提案時の一定の滑らかな減速計算（Cubic Ease Out）
-                let progress = elapsed / totalStopDuration;
-                let easeOut = 1 - Math.pow(1 - progress, 3);
-                
-                const arcSize = (2 * Math.PI) / prizes.length;
-                const finalAngle = -Math.PI / 2 - (targetIndex * arcSize) - (arcSize / 2);
-                
-                if (!window.startStoppingAngle) {
-                    window.startStoppingAngle = currentAngle;
-                    // 最低3回転させてから指定位置に止める
-                    window.targetFinalAngle = finalAngle - (3 * 2 * Math.PI); 
-                }
-                
-                currentAngle = window.startStoppingAngle + (window.targetFinalAngle - window.startStoppingAngle) * easeOut;
-
-            } else {
-                // 通常時の高速回転速度（最初の設定）
-                currentAngle += speed;
-            }
-
-            drawWheel();
-            requestAnimationFrame(updateAnimation);
         }
 
         // 自動スタート処理
         window.addEventListener("DOMContentLoaded", () => {
-            drawWheel();
+            initWheelLabels();
             
+            // 読み込み完了後、自動で最高速回転スタート
             setTimeout(() => {
-                isSpinning = true;
-                speed = 0.5; // 初期提案の速度
-                stopButton.disabled = false;
+                wheel.classList.add('spinning');
+                stopBtn.disabled = false;
                 resultDiv.innerText = "ルーレット回転中...";
-                requestAnimationFrame(updateAnimation);
             }, 500);
         });
 
         // STOPボタンが押された時の処理
-        stopButton.addEventListener("click", () => {
-            if (isSpinning && !isStopping) {
-                isStopping = true;
-                stopButton.disabled = true;
-                resultDiv.innerText = "じわじわ減速中...";
-            }
-        });
+        function stopRoulette() {
+            stopBtn.disabled = true;
+            resultDiv.innerText = "減速中...";
+
+            // 高速ループアニメーション用のクラスを解除
+            wheel.classList.remove('spinning');
+            
+            // 一番最初の滑らかなイージング用CSSクラスを付与
+            wheel.classList.add('stopping');
+
+            // 1マスの角度（10マスのため36度）
+            const angleStep = 360 / prizes.length;
+            
+            // 指定のマス（targetIndex）を正確に真上の針の位置に止めるための角度
+            // 初期状態の0度が「1マス目の左境界線」になるため、針の位置（真上）に合わせる計算
+            const targetAngle = 360 - (targetIndex * angleStep) - (angleStep / 2);
+            
+            // 一番最初のコードと同じく、しっかりと何回転（ここでは5回転=1800度）かさせてから指定位置にピタッと着地させる
+            const finalRotation = 1800 + targetAngle;
+
+            // 回転を適用
+            wheel.style.transform = `rotate(${finalRotation}deg)`;
+
+            // 3秒間の transition が終わったタイミングで結果を表示
+            setTimeout(() => {
+                resultDiv.innerText = `結果は 【${prizes[targetIndex]}】 です！`;
+            }, 3000); // transitionの3秒（3000ms）と同期
+        }
     </script>
 </body>
 </html>
