@@ -1,0 +1,817 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>祈花 Birthday QR Roulette</title>
+
+<script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
+
+<style>
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Kaku Gothic ProN",
+               "Yu Gothic", sans-serif;
+  background: linear-gradient(135deg, #fff0f7, #f5efff, #fff8df);
+  color: #5d4b60;
+  text-align: center;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "Rinka ♡ Rinka ♡ Rinka ♡";
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 48px;
+  font-weight: bold;
+  color: rgba(220, 150, 190, 0.08);
+  transform: rotate(-20deg);
+  pointer-events: none;
+  z-index: 0;
+}
+
+.screen {
+  display: none;
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  padding: 30px 20px;
+}
+
+.screen.active {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+h1 {
+  margin: 8px 0;
+  font-size: clamp(28px, 8vw, 48px);
+}
+
+h2 {
+  font-size: clamp(24px, 7vw, 38px);
+}
+
+.name {
+  font-size: clamp(60px, 20vw, 110px);
+  font-weight: 900;
+  color: #e68ab4;
+  text-shadow: 3px 3px 0 white;
+  margin: 15px 0;
+}
+
+.rinka {
+  font-size: 22px;
+  letter-spacing: 5px;
+  color: #c993c8;
+}
+
+.message {
+  font-size: 20px;
+  line-height: 1.8;
+  margin: 15px;
+}
+
+button {
+  border: none;
+  border-radius: 999px;
+  padding: 16px 30px;
+  margin: 10px;
+  font-size: 19px;
+  font-weight: bold;
+  background: #f19bc1;
+  color: white;
+  box-shadow: 0 5px 12px rgba(0,0,0,.15);
+  cursor: pointer;
+}
+
+button:active {
+  transform: scale(.95);
+}
+
+#reader {
+  width: min(90vw, 420px);
+  margin: 20px auto;
+  border-radius: 20px;
+  overflow: hidden;
+}
+
+#roulette {
+  width: min(82vw, 360px);
+  height: min(82vw, 360px);
+  border-radius: 50%;
+  border: 12px solid white;
+  box-shadow: 0 8px 25px rgba(0,0,0,.2);
+  background: conic-gradient(
+    #ffb6d5 0deg 60deg,
+    #ffd8ec 60deg 120deg,
+    #ffe9a8 120deg 180deg,
+    #ccecff 180deg 240deg,
+    #dfc7ff 240deg 300deg,
+    #c9f2dc 300deg 360deg
+  );
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 55px;
+  position: relative;
+  transition: transform 0.2s linear;
+}
+
+#roulette::after {
+  content: "🎀";
+  position: absolute;
+  background: white;
+  width: 90px;
+  height: 90px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 10px rgba(0,0,0,.15);
+}
+
+.pointer {
+  width: 0;
+  height: 0;
+  border-left: 18px solid transparent;
+  border-right: 18px solid transparent;
+  border-top: 42px solid #e85c9d;
+  margin-bottom: -10px;
+  position: relative;
+  z-index: 2;
+}
+
+#stopButton {
+  background: #d96aa5;
+  font-size: 25px;
+  padding: 18px 55px;
+}
+
+#resultTitle {
+  font-size: clamp(34px, 10vw, 60px);
+}
+
+#resultMessage {
+  font-size: clamp(25px, 7vw, 42px);
+  font-weight: bold;
+  line-height: 1.6;
+}
+
+.win {
+  background: linear-gradient(135deg, #fff0f8, #fff8d9);
+}
+
+.loss {
+  background: linear-gradient(135deg, #090812, #242033);
+  color: white;
+}
+
+.loss #resultTitle,
+.loss #resultMessage {
+  color: #ffdddd;
+  text-shadow: 0 0 12px #ff4444;
+}
+
+.shake {
+  animation: shake .12s infinite;
+}
+
+@keyframes shake {
+  0% { transform: translate(0); }
+  25% { transform: translate(6px,-4px); }
+  50% { transform: translate(-5px,5px); }
+  75% { transform: translate(4px,3px); }
+  100% { transform: translate(0); }
+}
+
+.confetti {
+  position: fixed;
+  top: -20px;
+  font-size: 25px;
+  animation: fall 3s linear forwards;
+  z-index: 10;
+}
+
+@keyframes fall {
+  to {
+    transform: translateY(110vh) rotate(720deg);
+    opacity: 0;
+  }
+}
+
+#flash {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: #000;
+  z-index: 20;
+}
+
+.final-message {
+  font-size: 22px;
+  line-height: 2;
+  margin: 20px;
+}
+
+.final-rinka {
+  font-size: 30px;
+  color: #d58ab4;
+  margin-top: 20px;
+}
+</style>
+</head>
+
+<body>
+
+<!-- オープニング -->
+<section id="opening" class="screen active">
+  <div class="rinka">Rinka ♡</div>
+
+  <h1>🎂 HAPPY BIRTHDAY 🎀</h1>
+
+  <div class="name">祈花</div>
+
+  <p class="message">
+    祈花ちゃん、準備はOK？<br>
+    QRコードを読み取って<br>
+    プレゼントをゲットしよう！ 🎁
+  </p>
+
+  <button onclick="startGame()">📷 QRコードを読み取る</button>
+</section>
+
+<!-- QR読み取り -->
+<section id="scanner" class="screen">
+  <h2>📷 QRコードを読んでね！</h2>
+
+  <div id="reader"></div>
+
+  <p id="scanMessage">
+    QRコードをカメラに映してね 🎀
+  </p>
+
+  <button onclick="backToOpening()">戻る</button>
+</section>
+
+<!-- ルーレット -->
+<section id="rouletteScreen" class="screen">
+  <h2>🎀 ルーレット 🎀</h2>
+
+  <div class="pointer"></div>
+  <div id="roulette">🌸 ⭐ 🍓 🦄 🎁</div>
+
+  <p id="rouletteMessage">
+    さあ、スタート！
+  </p>
+
+  <button id="stopButton" onclick="stopRoulette()">STOP!</button>
+</section>
+
+<!-- 結果 -->
+<section id="resultScreen" class="screen">
+  <div id="resultTitle"></div>
+  <div id="resultMessage"></div>
+
+  <button onclick="scanAgain()">📷 もう一度QRを読む</button>
+  <button onclick="showFinal()">🎂 お祝いメッセージ</button>
+</section>
+
+<!-- 最終メッセージ -->
+<section id="finalScreen" class="screen">
+  <div class="final-message">
+    🌸 祈花ちゃんへ 🌸
+
+    <h1>🎂 お誕生日おめでとう！ 🎂</h1>
+
+    <p>
+      これからも元気いっぱい、<br>
+      楽しい毎日を過ごしてね！
+    </p>
+
+    <div class="final-rinka">
+      Rinka ♡
+    </div>
+  </div>
+
+  <button onclick="scanAgain()">📷 もう一度遊ぶ</button>
+</section>
+
+<div id="flash"></div>
+
+<script>
+/* ================================
+   QRコードと結果の設定
+================================ */
+
+const QR_RESULTS = {
+
+  "QR01": {
+    win: true,
+    message: "パパからプレゼント",
+    person: "パパ"
+  },
+
+  "QR02": {
+    win: false
+  },
+
+  "QR03": {
+    win: true,
+    message: "ママからプレゼント",
+    person: "ママ"
+  },
+
+  "QR04": {
+    win: false
+  },
+
+  "QR05": {
+    win: true,
+    message: "お姉ちゃんからプレゼント",
+    person: "お姉ちゃん"
+  },
+
+  "QR06": {
+    win: false
+  },
+
+  "QR07": {
+    win: true,
+    message: "じーじからプレゼント",
+    person: "じーじ"
+  },
+
+  "QR08": {
+    win: false
+  },
+
+  "QR09": {
+    win: true,
+    message: "じーゆーみーちゃんからのプレゼント",
+    person: "じーゆーみーちゃん"
+  },
+
+  "QR10": {
+    win: false
+  }
+
+};
+
+
+/* ================================
+   画面切り替え
+================================ */
+
+function showScreen(id) {
+
+  document.querySelectorAll(".screen").forEach(screen => {
+    screen.classList.remove("active");
+  });
+
+  document.getElementById(id).classList.add("active");
+}
+
+
+/* ================================
+   音
+================================ */
+
+let audioContext = null;
+
+function initAudio() {
+
+  if (!audioContext) {
+    audioContext = new (
+      window.AudioContext ||
+      window.webkitAudioContext
+    )();
+  }
+
+  if (audioContext.state === "suspended") {
+    audioContext.resume();
+  }
+}
+
+
+function beep(frequency, duration, type="sine", volume=.08) {
+
+  if (!audioContext) return;
+
+  const oscillator = audioContext.createOscillator();
+  const gain = audioContext.createGain();
+
+  oscillator.type = type;
+  oscillator.frequency.value = frequency;
+
+  gain.gain.setValueAtTime(volume, audioContext.currentTime);
+  gain.gain.exponentialRampToValueAtTime(
+    0.001,
+    audioContext.currentTime + duration
+  );
+
+  oscillator.connect(gain);
+  gain.connect(audioContext.destination);
+
+  oscillator.start();
+  oscillator.stop(audioContext.currentTime + duration);
+}
+
+
+function tapSound() {
+  beep(700, .08, "square", .08);
+}
+
+
+function spinSound() {
+  beep(180, .06, "square", .04);
+}
+
+
+function winSound() {
+
+  beep(523, .15, "sine", .12);
+
+  setTimeout(() => beep(659, .15, "sine", .12), 150);
+  setTimeout(() => beep(784, .2, "sine", .12), 300);
+  setTimeout(() => beep(1046, .35, "sine", .12), 500);
+}
+
+
+function scarySound() {
+
+  beep(90, .5, "sawtooth", .13);
+
+  setTimeout(() => {
+    beep(55, .7, "sawtooth", .13);
+  }, 250);
+}
+
+
+/* ================================
+   QRスキャナー
+================================ */
+
+let scanner = null;
+let currentQR = null;
+let scanning = false;
+
+function startGame() {
+
+  initAudio();
+
+  showScreen("scanner");
+
+  setTimeout(startScanner, 300);
+}
+
+
+function startScanner() {
+
+  if (scanning) return;
+
+  scanner = new Html5Qrcode("reader");
+
+  scanner.start(
+    { facingMode: "environment" },
+    {
+      fps: 10,
+      qrbox: {
+        width: 250,
+        height: 250
+      }
+    },
+
+    qrCodeMessage => {
+
+      if (!scanning) return;
+
+      const code = qrCodeMessage.trim();
+
+      if (!QR_RESULTS[code]) {
+
+        document.getElementById("scanMessage").textContent =
+          "このQRコードは登録されていません 😢";
+
+        return;
+      }
+
+      currentQR = code;
+      scanning = false;
+
+      scanner.stop().then(() => {
+
+        showScreen("rouletteScreen");
+
+        setTimeout(() => {
+          startRoulette();
+        }, 500);
+
+      });
+
+    },
+
+    errorMessage => {
+      // カメラ読み取り中の一時的なエラーは無視
+    }
+
+  ).then(() => {
+
+    scanning = true;
+
+  }).catch(error => {
+
+    document.getElementById("scanMessage").textContent =
+      "カメラを起動できませんでした。HTTPSで開いているか確認してね。";
+
+  });
+}
+
+
+function stopScanner() {
+
+  if (scanner && scanning) {
+
+    scanning = false;
+
+    scanner.stop().catch(() => {});
+
+  }
+}
+
+
+function backToOpening() {
+
+  stopScanner();
+  showScreen("opening");
+
+}
+
+
+/* ================================
+   ルーレット
+================================ */
+
+let rouletteAngle = 0;
+let rouletteRunning = false;
+let stopRequested = false;
+
+function startRoulette() {
+
+  rouletteRunning = true;
+  stopRequested = false;
+
+  document.getElementById("stopButton").disabled = false;
+
+  document.getElementById("rouletteMessage").textContent =
+    "ドキドキ……STOPを押してね！";
+
+  rouletteAngle = 0;
+
+  rouletteLoop();
+}
+
+
+function rouletteLoop() {
+
+  if (!rouletteRunning) return;
+
+  rouletteAngle += 18;
+
+  document.getElementById("roulette").style.transform =
+    `rotate(${rouletteAngle}deg)`;
+
+  spinSound();
+
+  requestAnimationFrame(rouletteLoop);
+}
+
+
+function stopRoulette() {
+
+  if (!rouletteRunning || stopRequested) return;
+
+  stopRequested = true;
+
+  tapSound();
+
+  document.getElementById("stopButton").disabled = true;
+
+  document.getElementById("rouletteMessage").textContent =
+    "カタカタカタ……";
+
+  decelerateRoulette();
+}
+
+
+function decelerateRoulette() {
+
+  rouletteRunning = false;
+
+  let speed = 16;
+
+  const deceleration = setInterval(() => {
+
+    rouletteAngle += speed;
+
+    document.getElementById("roulette").style.transform =
+      `rotate(${rouletteAngle}deg)`;
+
+    speed *= 0.88;
+
+    if (speed < 0.4) {
+
+      clearInterval(deceleration);
+
+      document.getElementById("rouletteMessage").textContent =
+        "カタ…… カッ…… ピタッ……！";
+
+      setTimeout(() => {
+
+        showResult();
+
+      }, 800);
+
+    }
+
+  }, 60);
+}
+
+
+/* ================================
+   結果表示
+================================ */
+
+function showResult() {
+
+  const result = QR_RESULTS[currentQR];
+
+  if (result.win) {
+
+    showWin(result);
+
+  } else {
+
+    showLoss();
+
+  }
+
+}
+
+
+function showWin(result) {
+
+  const screen = document.getElementById("resultScreen");
+
+  screen.classList.remove("loss");
+  screen.classList.add("win");
+
+  document.getElementById("resultTitle").textContent =
+    "🎉 あたり！ 🎉";
+
+  document.getElementById("resultMessage").innerHTML =
+    `🎁 ${result.message}<br><br>
+     💕 ${result.person}に<br>
+     この画面を見せてね！`;
+
+  showScreen("resultScreen");
+
+  winSound();
+
+  createConfetti();
+
+}
+
+
+function showLoss() {
+
+  const screen = document.getElementById("resultScreen");
+
+  screen.classList.remove("win");
+  screen.classList.add("loss");
+
+  document.getElementById("resultTitle").textContent =
+    "😈 ざんねん……";
+
+  document.getElementById("resultMessage").innerHTML =
+    "プレゼントは……<br>ない……👻";
+
+  const flash = document.getElementById("flash");
+
+  flash.style.display = "block";
+
+  setTimeout(() => {
+    flash.style.display = "none";
+  }, 180);
+
+  screen.classList.add("shake");
+
+  setTimeout(() => {
+    screen.classList.remove("shake");
+  }, 900);
+
+  showScreen("resultScreen");
+
+  scarySound();
+
+}
+
+
+/* ================================
+   紙吹雪
+================================ */
+
+function createConfetti() {
+
+  const symbols = [
+    "🎀",
+    "🌸",
+    "⭐",
+    "🍓",
+    "🦄",
+    "🎁",
+    "💕"
+  ];
+
+  for (let i = 0; i < 35; i++) {
+
+    const item = document.createElement("div");
+
+    item.className = "confetti";
+
+    item.textContent =
+      symbols[Math.floor(Math.random() * symbols.length)];
+
+    item.style.left =
+      Math.random() * 100 + "vw";
+
+    item.style.animationDelay =
+      Math.random() * 1.5 + "s";
+
+    document.body.appendChild(item);
+
+    setTimeout(() => {
+      item.remove();
+    }, 4500);
+
+  }
+
+}
+
+
+/* ================================
+   もう一度QRを読む
+================================ */
+
+function scanAgain() {
+
+  document.getElementById("resultScreen")
+    .classList.remove("win", "loss");
+
+  document.getElementById("scanMessage").textContent =
+    "QRコードをカメラに映してね 🎀";
+
+  showScreen("scanner");
+
+  setTimeout(startScanner, 300);
+
+}
+
+
+/* ================================
+   最終メッセージ
+================================ */
+
+function showFinal() {
+
+  showScreen("finalScreen");
+
+  winSound();
+
+  createConfetti();
+
+}
+
+
+/* ================================
+   ページ読み込み時
+================================ */
+
+window.addEventListener("load", () => {
+
+  document.getElementById("stopButton").disabled = false;
+
+});
+</script>
+
+</body>
+</html>
