@@ -29,7 +29,7 @@
         }
         canvas {
             border-radius: 50%;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            box-shadow: 0 6px 15px rgba(0,0,0,0.25);
         }
         /* 上部の矢印（針） */
         .pointer {
@@ -48,27 +48,28 @@
             background-color: #ff3b30;
             color: white;
             border: none;
-            padding: 15px 40px;
-            font-size: 20px;
+            padding: 15px 50px;
+            font-size: 22px;
             font-weight: bold;
-            border-radius: 30px;
+            border-radius: 35px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
             transition: background-color 0.2s, transform 0.1s;
-            margin-top: 20px;
+            margin-top: 25px;
         }
         #stopButton:active {
             transform: scale(0.95);
         }
         #stopButton:disabled {
             background-color: #ccc;
+            box-shadow: none;
             cursor: not-allowed;
         }
         #result {
             font-size: 28px;
             font-weight: bold;
             color: #333;
-            margin-top: 20px;
+            margin-top: 25px;
             height: 40px;
         }
         .info {
@@ -92,9 +93,8 @@
     <div id="result"></div>
 
     <script>
-        // 景品の設定（当たり5つ、はずれ5つの交互10マス）
+        // 景品の設定（10マス）
         const prizes = ["当たり🎯", "はずれ❌", "当たり🎯", "はずれ❌", "当たり🎯", "はずれ❌", "当たり🎯", "はずれ❌", "当たり🎯", "はずれ❌"];
-        // 見やすさを考慮し、当たり＝薄い赤系、はずれ＝薄いグレー系で交互に配置
         const colors = ["#ff7675", "#dfe6e9", "#ff7675", "#dfe6e9", "#ff7675", "#dfe6e9", "#ff7675", "#dfe6e9", "#ff7675", "#dfe6e9"];
 
         const canvas = document.getElementById("wheel");
@@ -102,21 +102,25 @@
         const stopButton = document.getElementById("stopButton");
         const resultDiv = document.getElementById("result");
 
-        let currentAngle = 0; // 現在の回転角度（ラジアン）
-        let speed = 0;        // 回転速度
+        let currentAngle = 0; 
+        let speed = 0;        
         let isSpinning = false;
         let isStopping = false;
-        let targetIndex = 0;  // 停止させる狙いのマスのインデックス
-        let stopTimer = 0;
-        let totalStopDuration = 4000; // STOPを押してから止まるまでの時間（4秒）
+        let targetIndex = 0;  
+        
+        // 物理減速用の変数
+        let stopStartTime = 0;
+        let startAngle = 0;
+        let targetFinalAngle = 0;
+        const duration = 4500; // 減速にかける時間（4.5秒）
 
-        // URLから「?id=xxx」を取得する処理
+        // URLから「?id=xxx」を取得
         function getQrId() {
             let urlParams = new URLSearchParams(window.location.search);
             let id = urlParams.get('id');
             if (!id) {
                 const match = window.location.href.match(/[?&]id=([^&#]*)/);
-                id = match ? match[1] : null;
+                id = match ? match : null;
             }
             return id;
         }
@@ -124,7 +128,7 @@
         const qrId = getQrId() || "default";
         document.getElementById("debug-id").innerText = `読み込んだID: ${qrId}`;
 
-        // 文字列から固定の数値を生成する（ハッシュ関数）
+        // ハッシュ関数（結果固定用）
         function hashCode(str) {
             let hash = 0;
             for (let i = 0; i < str.length; i++) {
@@ -133,11 +137,10 @@
             return hash;
         }
 
-        // IDに基づいて、このQRコードが「どのマスで止まるか」を事前に完全固定
         const hash = hashCode(qrId);
         targetIndex = Math.abs(hash) % prizes.length;
 
-        // ルーレットの盤面を描画
+        // 盤面描画
         function drawWheel() {
             const numSegments = prizes.length;
             const arcSize = (2 * Math.PI) / numSegments;
@@ -147,45 +150,66 @@
             for (let i = 0; i < numSegments; i++) {
                 const angle = currentAngle + (i * arcSize);
                 
-                // セグメント（扇形）の描画
                 ctx.beginPath();
                 ctx.fillStyle = colors[i];
                 ctx.moveTo(160, 160);
                 ctx.arc(160, 160, 160, angle, angle + arcSize);
                 ctx.lineTo(160, 160);
                 ctx.fill();
-                ctx.strokeStyle = "#ffffff"; // 境界線を白にしてスタイリッシュに
+                ctx.strokeStyle = "#ffffff"; 
                 ctx.lineWidth = 2;
                 ctx.stroke();
 
-                // テキスト（絵文字）の描画
                 ctx.save();
                 ctx.translate(160, 160);
                 ctx.rotate(angle + arcSize / 2);
                 ctx.textAlign = "right";
                 ctx.fillStyle = "#333";
                 ctx.font = "bold 16px Arial";
-                // 10マスで幅が狭いため、少し外側に配置
                 ctx.fillText(prizes[i], 145, 6);
                 ctx.restore();
             }
         }
 
-        // メインのアニメーションループ
+        // 本物らしい物理イージング関数（Quintic Ease Out）
+        // 最初のブレーキは強く、止まる直前は非常にゆっくり粘る
+        function easeOutQuint(t) {
+            return 1 - Math.pow(1 - t, 5);
+        }
+
+        // メインアニメーション
         function updateAnimation(timestamp) {
             if (!isSpinning) return;
 
             if (isStopping) {
-                if (!stopTimer) stopTimer = timestamp;
-                let elapsed = timestamp - stopTimer;
+                if (!stopStartTime) {
+                    stopStartTime = timestamp;
+                    startAngle = currentAngle;
 
-                if (elapsed >= totalStopDuration) {
+                    // 現在の角度から、指定のマス（targetIndex）が真上に来る最終角度を逆算
+                    const arcSize = (2 * Math.PI) / prizes.length;
+                    // 本物のルーレットらしく、STOPを押してから最低4回転(8*PI)以上させてから着地させる
+                    const baseFinalAngle = -Math.PI / 2 - (targetIndex * arcSize) - (arcSize / 2);
+                    
+                    // 現在の角度より過去に戻らないよう、十分な回転数を加算して目標角度を固定
+                    const currentLaps = Math.ceil(currentAngle / (2 * Math.PI));
+                    targetFinalAngle = baseFinalAngle - ((currentLaps + 5) * 2 * Math.PI);
+                }
+
+                let elapsed = timestamp - stopStartTime;
+                let progress = Math.min(elapsed / duration, 1);
+
+                // 物理的な粘り気のある減速を適用
+                let ease = easeOutQuint(progress);
+                currentAngle = startAngle + (targetFinalAngle - startAngle) * ease;
+
+                if (progress >= 1) {
+                    // 完全に停止
                     isSpinning = false;
                     isStopping = false;
-                    speed = 0;
                     stopButton.disabled = true;
-
-                    // 計算上、必ずtargetIndexのマスが真上にくるように角度を固定
+                    
+                    // 誤差をなくすため正確な最終角度に固定
                     const arcSize = (2 * Math.PI) / prizes.length;
                     currentAngle = -Math.PI / 2 - (targetIndex * arcSize) - (arcSize / 2);
                     drawWheel();
@@ -193,49 +217,32 @@
                     resultDiv.innerText = `結果は 【${prizes[targetIndex]}】 です！`;
                     return;
                 }
-
-                // じわじわと滑らかに減速させるイージング（ブレーキ計算）
-                let progress = elapsed / totalStopDuration;
-                let easeOut = 1 - Math.pow(1 - progress, 3);
-                
-                const arcSize = (2 * Math.PI) / prizes.length;
-                const finalAngle = -Math.PI / 2 - (targetIndex * arcSize) - (arcSize / 2);
-                
-                if (!window.startStoppingAngle) {
-                    window.startStoppingAngle = currentAngle;
-                    // 最低でも3回転させてから指定位置に止める
-                    window.targetFinalAngle = finalAngle - (3 * 2 * Math.PI); 
-                }
-                
-                currentAngle = window.startStoppingAngle + (window.targetFinalAngle - window.startStoppingAngle) * easeOut;
-
             } else {
-                currentAngle += speed;
+                // 通常時の高速回転（滑らかに一定速度で回す）
+                currentAngle -= 0.25; 
             }
 
             drawWheel();
             requestAnimationFrame(updateAnimation);
         }
 
-        // 自動スタート処理
+        // 自動スタート
         window.addEventListener("DOMContentLoaded", () => {
             drawWheel();
-            
             setTimeout(() => {
                 isSpinning = true;
-                speed = 0.4; // 10マスに合わせて回転速度を最適化
                 stopButton.disabled = false;
                 resultDiv.innerText = "ルーレット回転中...";
                 requestAnimationFrame(updateAnimation);
-            }, 500);
+            }, 600);
         });
 
-        // STOPボタンが押された時の処理
+        // STOPボタン
         stopButton.addEventListener("click", () => {
             if (isSpinning && !isStopping) {
                 isStopping = true;
                 stopButton.disabled = true;
-                resultDiv.innerText = "じわじわ減速中...";
+                resultDiv.innerText = "シューーーー…（減速中）";
             }
         });
     </script>
