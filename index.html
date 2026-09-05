@@ -137,6 +137,7 @@
     border:6px solid #fff;
     box-shadow:0 0 0 6px var(--pink-main), 0 14px 30px rgba(160,60,120,.35);
     overflow:hidden;
+    --outer-r: min(28.56vw, 115.6px);
   }
   .seg-label{
     position:absolute; top:50%; left:50%;
@@ -379,24 +380,12 @@ function buildWheel(){
     const label = document.createElement('div');
     label.className = 'seg-label';
     label.innerHTML = `<span class="ic">${s.icon}</span>`;
+    const angle = i*SEG_ANGLE + SEG_ANGLE/2;
+    label.style.transform = `rotate(${angle}deg) translateY(var(--outer-r))`;
     wheelEl.appendChild(label);
   });
 }
 buildWheel();
-
-// アイコンを盤面の外寄りに配置する（ホイールの実サイズに応じて再計算）
-function positionSegLabels(){
-  const radius = wheelEl.clientWidth / 2;
-  if(!radius) return;
-  const outerR = radius * 0.68; // 中心からの距離：外寄り
-  document.querySelectorAll('#wheel .seg-label').forEach((label, i)=>{
-    const angle = i*SEG_ANGLE + SEG_ANGLE/2;
-    label.style.transform = `rotate(${angle}deg) translateY(${outerR}px)`;
-  });
-}
-positionSegLabels();
-window.addEventListener('resize', positionSegLabels);
-window.addEventListener('orientationchange', ()=> setTimeout(positionSegLabels, 200));
 
 /* ===================== 紙吹雪エフェクト ===================== */
 const fxLayer = document.getElementById('fx-layer');
