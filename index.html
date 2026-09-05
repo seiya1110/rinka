@@ -1,615 +1,309 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>祈花ちゃん誕生日ルーレット</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Kaisei+Decol&family=Zen+Maru+Gothic:wght@500;700;900&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --pink-bg1:#fff3f8;
-    --pink-bg2:#f3e8ff;
-    --pink-main:#ff6fa8;
-    --pink-deep:#e0508a;
-    --purple:#a983ff;
-    --gold:#ffcf5c;
-    --gold-deep:#f4a825;
-    --ink:#4a2e52;
-    --white:#fffaf9;
-    --scary-bg:#150c26;
-    --scary-line:#5b3a8a;
-  }
-  *{box-sizing:border-box;}
-  html,body{
-    margin:0; padding:0; width:100%; height:100%;
-    overscroll-behavior:none;
-    -webkit-tap-highlight-color:transparent;
-    font-family:'Zen Maru Gothic', sans-serif;
-    color:var(--ink);
-    background:radial-gradient(circle at 50% 0%, var(--pink-bg1), var(--pink-bg2) 75%);
-  }
-  .display{ font-family:'Kaisei Decol', serif; }
-  #app{
-    position:fixed; inset:0;
-    display:flex; flex-direction:column;
-    overflow:hidden;
-  }
-  .screen{
-    position:absolute; inset:0;
-    display:none;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    padding:24px 20px;
-    text-align:center;
-    transition:opacity .3s ease;
-  }
-  .screen.active{ display:flex; }
-
-  /* --- decorations --- */
-  .deco-row{
-    position:absolute; top:14px; left:0; right:0;
-    display:flex; justify-content:center; gap:10px;
-    font-size:22px; opacity:.85; pointer-events:none;
-  }
-  .rinka-sub{
-    font-size:15px; letter-spacing:.04em; color:var(--pink-deep);
-    opacity:.75; margin-top:2px;
-  }
-
-  /* --- opening --- */
-  #screen-opening .headline{ font-size:15px; letter-spacing:.12em; color:var(--gold-deep); margin-bottom:6px;}
-  #screen-opening h1{
-    font-size:min(20vw,88px); line-height:1; margin:0 0 2px 0;
-    color:var(--pink-deep);
-    text-shadow:2px 2px 0 #fff, 0 6px 14px rgba(224,80,138,.25);
-  }
-  .opening-msg{ margin:22px 0 0 0; font-size:17px; line-height:1.9; font-weight:700;}
-  .opening-msg span{ display:block; }
-  .big-btn{
-    margin-top:30px;
-    font-family:'Zen Maru Gothic', sans-serif;
-    font-weight:900; font-size:19px;
-    color:#fff;
-    background:linear-gradient(160deg, var(--pink-main), var(--pink-deep));
-    border:none; border-radius:999px;
-    padding:18px 40px;
-    box-shadow:0 10px 0 #c73f74, 0 14px 24px rgba(224,80,138,.35);
-    cursor:pointer;
-    transform:translateY(0);
-    transition:transform .12s, box-shadow .12s;
-  }
-  .big-btn:active{ transform:translateY(8px); box-shadow:0 2px 0 #c73f74, 0 4px 10px rgba(224,80,138,.35); }
-  .ghost-btn{
-    margin-top:16px;
-    font-family:'Zen Maru Gothic', sans-serif;
-    font-weight:700; font-size:15px;
-    color:var(--pink-deep);
-    background:#fff;
-    border:2px solid var(--pink-main);
-    border-radius:999px;
-    padding:12px 26px;
-    cursor:pointer;
-  }
-
-  /* --- scan screen --- */
-  #screen-scan h2{ font-size:21px; margin:0 0 4px 0; }
-  #reader{
-    width:min(78vw, 300px); aspect-ratio:1/1;
-    border-radius:28px; overflow:hidden;
-    margin:20px 0 6px 0;
-    border:5px solid var(--pink-main);
-    box-shadow:0 10px 26px rgba(224,80,138,.28);
-    background:#000;
-  }
-  #reader video{ object-fit:cover; }
-  .scan-caption{ font-size:15px; font-weight:700; margin-top:6px; }
-  .scan-error{
-    margin-top:14px; padding:12px 18px; border-radius:16px;
-    background:#fff0ef; color:#c94b4b; font-weight:700; font-size:14px;
-    display:none;
-  }
-  .scan-error.show{ display:inline-block; }
-
-  /* --- roulette screen --- */
-  #screen-roulette{ padding-top:10px; }
-  .wheel-wrap{
-    position:relative;
-    width:min(84vw, 340px); aspect-ratio:1/1;
-    margin-top:6px;
-  }
-  .pointer{
-    position:absolute; top:-14px; left:50%;
-    width:0; height:0;
-    transform:translateX(-50%);
-    border-left:16px solid transparent;
-    border-right:16px solid transparent;
-    border-top:26px solid var(--gold-deep);
-    filter:drop-shadow(0 3px 3px rgba(0,0,0,.25));
-    z-index:5;
-  }
-  #wheel{
-    width:100%; height:100%;
-    border-radius:50%;
-    position:relative;
-    border:6px solid #fff;
-    box-shadow:0 0 0 6px var(--pink-main), 0 14px 30px rgba(160,60,120,.35);
-    overflow:hidden;
-    --outer-r: min(28.56vw, 115.6px);
-  }
-  .seg-label{
-    position:absolute; top:50%; left:50%;
-    width:0; height:0;
-    transform-origin:0 0;
-  }
-  .seg-label .ic{
-    position:absolute; left:0; top:0;
-    transform:translate(-50%,-50%);
-    display:block; font-size:32px; line-height:1;
-    filter:drop-shadow(0 2px 3px rgba(0,0,0,.35));
-  }
-  .hub{
-    position:absolute; top:50%; left:50%; width:22%; height:22%;
-    margin:-11% 0 0 -11%;
-    background:#fff; border-radius:50%;
-    box-shadow:0 3px 8px rgba(0,0,0,.2);
-    display:flex; align-items:center; justify-content:center;
-    font-size:20px; z-index:4;
-  }
-  .stop-btn{
-    margin-top:26px;
-    font-family:'Zen Maru Gothic', sans-serif;
-    font-weight:900; font-size:24px; letter-spacing:.05em;
-    color:#fff;
-    background:linear-gradient(160deg, var(--gold), var(--gold-deep));
-    border:none; border-radius:999px;
-    width:130px; height:130px;
-    box-shadow:0 10px 0 #c9871a, 0 14px 24px rgba(244,168,37,.4);
-    cursor:pointer;
-  }
-  .stop-btn:active{ transform:translateY(8px); box-shadow:0 2px 0 #c9871a; }
-  .stop-btn:disabled{ opacity:.45; }
-  .tick-caption{ margin-top:16px; font-size:14px; font-weight:700; color:var(--pink-deep); min-height:20px; }
-
-  /* --- result screen --- */
-  #screen-result{ transition:background .4s ease; }
-  #screen-result.win{ background:radial-gradient(circle at 50% 20%, #fff7d6, var(--pink-bg2) 80%); }
-  #screen-result.lose{ background:var(--scary-bg); color:#e9ddff; }
-  .result-icon{ font-size:80px; line-height:1; }
-  .result-title{ font-size:30px; font-weight:900; margin:8px 0 4px 0; }
-  #screen-result.win .result-title{ color:var(--pink-deep); }
-  #screen-result.lose .result-title{ color:#d9c6ff; }
-  .result-sub{ font-size:18px; font-weight:700; margin:2px 0; }
-  .result-note{ font-size:15px; margin-top:14px; font-weight:700; }
-  #screen-result.win .result-note{ color:var(--gold-deep); }
-  #screen-result.lose .result-note{ color:#9d86c9; }
-  .result-buttons{ margin-top:26px; display:flex; flex-direction:column; gap:10px; }
-
-  .shake{ animation: shakeAnim .5s; }
-  @keyframes shakeAnim{
-    0%,100%{ transform:translate(0,0); }
-    20%{ transform:translate(-8px,4px); }
-    40%{ transform:translate(8px,-4px); }
-    60%{ transform:translate(-6px,-2px); }
-    80%{ transform:translate(6px,3px); }
-  }
-  .flash-dark{ animation: flashDark .5s; }
-  @keyframes flashDark{
-    0%{ background:#000; }
-    100%{ background:var(--scary-bg); }
-  }
-
-  /* --- final screen --- */
-  #screen-final{ background:radial-gradient(circle at 50% 15%, #ffe9f3, var(--pink-bg2) 80%); }
-  .final-msg{ font-size:17px; line-height:2; font-weight:700; margin:18px 0; }
-  .final-rinka{ font-size:22px; color:var(--pink-deep); margin-top:6px; letter-spacing:.1em; }
-
-  /* --- confetti / sparkle overlay --- */
-  #fx-layer{
-    position:absolute; inset:0; pointer-events:none; overflow:hidden; z-index:20;
-  }
-  .confetti{
-    position:absolute; top:-10%;
-    font-size:22px;
-    animation-name:fall; animation-timing-function:linear; animation-fill-mode:forwards;
-  }
-  @keyframes fall{
-    0%{ transform:translateY(0) rotate(0deg); opacity:1; }
-    100%{ transform:translateY(115vh) rotate(360deg); opacity:.9; }
-  }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QRコード連動ルーレット</title>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            text-align: center;
+            background-color: #f0f2f5;
+            margin: 0;
+            padding: 20px;
+            color: #333;
+        }
+        .container {
+            max-width: 500px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 16px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+        h1 {
+            font-size: 24px;
+            margin-bottom: 5px;
+            color: #2c3e50;
+        }
+        .subtitle {
+            font-size: 14px;
+            color: #7f8c8d;
+            margin-bottom: 25px;
+        }
+        .wheel-container {
+            position: relative;
+            width: 300px;
+            height: 300px;
+            margin: 0 auto 30px auto;
+        }
+        canvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.15);
+        }
+        .pointer {
+            position: absolute;
+            top: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 0;
+            height: 0;
+            border-left: 15px solid transparent;
+            border-right: 15px solid transparent;
+            border-top: 25px solid #ff4757;
+            z-index: 10;
+            filter: drop-shadow(0 2px 4px rgba(0,0,0,0.2));
+        }
+        .btn {
+            background-color: #3498db;
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 6px rgba(52, 152, 219, 0.3);
+            width: 80%;
+        }
+        .btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-2px);
+        }
+        .btn:disabled {
+            background-color: #bdc3c7;
+            box-shadow: none;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .btn.stop-mode {
+            background-color: #e74c3c;
+            box-shadow: 0 4px 6px rgba(231, 76, 60, 0.3);
+        }
+        .btn.stop-mode:hover {
+            background-color: #c0392b;
+        }
+        #result {
+            margin-top: 25px;
+            font-size: 22px;
+            font-weight: bold;
+            height: 30px;
+            color: #2c3e50;
+        }
+        .info-box {
+            margin-top: 20px;
+            background-color: #ecf0f1;
+            padding: 12px;
+            border-radius: 8px;
+            font-size: 13px;
+            color: #555;
+            text-align: left;
+            line-height: 1.5;
+        }
+    </style>
 </head>
 <body>
-<div id="app">
 
-  <!-- 1. オープニング -->
-  <div id="screen-opening" class="screen active">
-    <div class="deco-row">🎂 🎀 ⭐ 🍓 🦄 🎁</div>
-    <div class="headline display">HAPPY BIRTHDAY</div>
-    <h1 class="display">祈花</h1>
-    <div class="rinka-sub">Rinka ♡</div>
-    <p class="opening-msg">
-      <span>祈花ちゃん、準備はOK？</span>
-      <span>QRコードを読み取って<br>プレゼントをゲットしよう！ 🎁</span>
-    </p>
-    <button class="big-btn" id="btn-start">📷 QRコードを読み取る</button>
-  </div>
+<div class="container">
+    <h1>QRコード連動ルーレット</h1>
+    <div class="subtitle" id="url-display">QRコードからパラメータを読み込みます</div>
 
-  <!-- 2. QR読み取り画面 -->
-  <div id="screen-scan" class="screen">
-    <h2>📷 QRコードを読んでね！</h2>
-    <div id="reader"></div>
-    <p class="scan-caption">QRコードをカメラに映してね 🎀</p>
-    <div class="scan-error" id="scan-error">このQRコードは登録されていません 😢</div>
-  </div>
-
-  <!-- 3. ルーレット画面 -->
-  <div id="screen-roulette" class="screen">
-    <div class="wheel-wrap">
-      <div class="pointer"></div>
-      <div id="wheel"></div>
-      <div class="hub">🎀</div>
+    <div class="wheel-container">
+        <div class="pointer"></div>
+        <canvas id="wheel" width="300" height="300"></canvas>
     </div>
-    <button class="stop-btn" id="btn-stop">STOP!</button>
-    <div class="tick-caption" id="tick-caption">&nbsp;</div>
-  </div>
 
-  <!-- 4. 結果画面 -->
-  <div id="screen-result" class="screen">
-    <div class="result-icon" id="result-icon">🎉</div>
-    <div class="result-title" id="result-title">あたり！</div>
-    <div class="result-sub" id="result-sub">パパからプレゼント</div>
-    <div class="result-note" id="result-note">パパにこの画面を見せてね！</div>
-    <div class="result-buttons">
-      <button class="big-btn" id="btn-again">📷 もう一度QRを読む</button>
-      <button class="ghost-btn" id="btn-tofinal">🎂 お祝いメッセージ</button>
+    <button id="actionBtn" class="btn" disabled>STOP</button>
+
+    <div id="result"></div>
+
+    <div class="info-box">
+        <strong>💡 使い方・仕組み:</strong><br>
+        1. URLの末尾に <code>?id=123</code> や <code>?id=apple</code> のように文字を自由につけてQRコードを作成します。<br>
+        2. カメラで読み取ると自動で高速回転が始まります。<br>
+        3. 「STOP」を押すと、十分な時間をかけて滑らかに減速します。<br>
+        4. 結果はIDから計算された固定値（ハッシュ）になるため、同じQRコードなら必ず同じ結果になります。
     </div>
-  </div>
-
-  <!-- 5. 最終画面 -->
-  <div id="screen-final" class="screen">
-    <div style="font-size:34px;">🌸</div>
-    <div class="final-msg">
-      祈花ちゃんへ 🌸<br><br>
-      🎂 お誕生日おめでとう！ 🎂<br><br>
-      これからも元気いっぱい、<br>
-      楽しい毎日を過ごしてね！
-    </div>
-    <div class="final-rinka display">Rinka ♡</div>
-  </div>
-
-  <div id="fx-layer"></div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/html5-qrcode.min.js"></script>
 <script>
-/* ===================== データ定義 ===================== */
-// 盤面は10マス、0番始まりで時計回り。QR01→0, QR02→1 ... の固定対応。
-const SEGMENTS = [
-  { key:'papa',   label:'パパ',           icon:'👨', win:true,  color:'#ff9dc0' },
-  { key:'lose1',  label:'はずれ',          icon:'😈', win:false, color:'#3a2a5c' },
-  { key:'mama',   label:'ママ',            icon:'👩', win:true,  color:'#ffb0d6' },
-  { key:'lose2',  label:'はずれ',          icon:'👻', win:false, color:'#2c2050' },
-  { key:'sister', label:'お姉ちゃん',       icon:'👧', win:true,  color:'#ffc2e0' },
-  { key:'lose3',  label:'はずれ',          icon:'😈', win:false, color:'#3a2a5c' },
-  { key:'jiji',   label:'じーじ',          icon:'👴', win:true,  color:'#ffd1e6' },
-  { key:'lose4',  label:'はずれ',          icon:'👻', win:false, color:'#2c2050' },
-  { key:'giyumi', label:'じーゆーみーちゃん', icon:'👱‍♀️', win:true,  color:'#ffe0ee' },
-  { key:'lose5',  label:'はずれ',          icon:'😈', win:false, color:'#3a2a5c' },
-];
+    // ルーレットの選択肢（名前と色）
+    const segments = [
+        { label: "大吉", color: "#fad390" },
+        { label: "中吉", color: "#f8a5c2" },
+        { label: "小吉", color: "#18dcff" },
+        { label: "吉", color: "#32ff7e" },
+        { label: "末吉", color: "#7efff5" },
+        { label: "凶", color: "#cd84f1" }
+    ];
 
-const QR_MAP = {
-  'QR01': { seg:0, sub:'パパからプレゼント',           note:'パパにこの画面を見せてね！' },
-  'QR02': { seg:1, sub:null, note:null },
-  'QR03': { seg:2, sub:'ママからプレゼント',           note:'ママにこの画面を見せてね！' },
-  'QR04': { seg:3, sub:null, note:null },
-  'QR05': { seg:4, sub:'お姉ちゃんからプレゼント',      note:'お姉ちゃんにこの画面を見せてね！' },
-  'QR06': { seg:5, sub:null, note:null },
-  'QR07': { seg:6, sub:'じーじからプレゼント',          note:'じーじにこの画面を見せてね！' },
-  'QR08': { seg:7, sub:null, note:null },
-  'QR09': { seg:8, sub:'じーゆーみーちゃんからのプレゼント', note:'じーゆーみーちゃんにこの画面を見せてね！' },
-  'QR10': { seg:9, sub:null, note:null },
-};
+    const canvas = document.getElementById("wheel");
+    const ctx = canvas.getContext("2d");
+    const actionBtn = document.getElementById("actionBtn");
+    const resultDiv = document.getElementById("result");
+    const urlDisplay = document.getElementById("url-display");
 
-const SEG_ANGLE = 360 / SEGMENTS.length;
+    const size = canvas.width;
+    const center = size / 2;
+    const radPerSeg = (2 * Math.PI) / segments.length;
 
-/* ===================== 画面遷移 ===================== */
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(el=>el.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-}
+    let currentAngle = 0;
+    let speed = 0;
+    let isSpinning = false;
+    let isStopping = false;
+    let targetAngle = null;
+    let stopProgress = 0;
+    const duration = 240; // 減速にかけるフレーム数（約4秒）
+    let initialStopSpeed = 0;
 
-/* ===================== 音の演出（Web Audio） ===================== */
-let audioCtx = null;
-function ensureAudio(){
-  if(!audioCtx){
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if(audioCtx.state === 'suspended') audioCtx.resume();
-}
-function beep(freq, duration, type='square', gainStart=0.12, when=0){
-  if(!audioCtx) return;
-  const t0 = audioCtx.currentTime + when;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type = type;
-  osc.frequency.setValueAtTime(freq, t0);
-  gain.gain.setValueAtTime(gainStart, t0);
-  gain.gain.exponentialRampToValueAtTime(0.001, t0 + duration);
-  osc.connect(gain); gain.connect(audioCtx.destination);
-  osc.start(t0); osc.stop(t0 + duration);
-}
-function playTick(){ beep(720, 0.05, 'square', 0.10); }
-function playStopClick(){ beep(300, 0.09, 'square', 0.16); }
-function playFinalClack(){ beep(220, 0.14, 'square', 0.18); }
-function playPita(){ beep(880, 0.18, 'triangle', 0.16); }
-function playFanfare(){
-  const notes = [523.25, 659.25, 784.0, 1046.5];
-  notes.forEach((f,i)=> beep(f, 0.32, 'triangle', 0.14, i*0.14));
-}
-function playScary(){
-  if(!audioCtx) return;
-  const t0 = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
-  osc.type='sawtooth';
-  osc.frequency.setValueAtTime(140, t0);
-  osc.frequency.exponentialRampToValueAtTime(60, t0+0.9);
-  gain.gain.setValueAtTime(0.001, t0);
-  gain.gain.linearRampToValueAtTime(0.14, t0+0.08);
-  gain.gain.exponentialRampToValueAtTime(0.001, t0+1.0);
-  osc.connect(gain); gain.connect(audioCtx.destination);
-  osc.start(t0); osc.stop(t0+1.0);
-}
-function playChime(){
-  [784, 987.77, 1174.66].forEach((f,i)=> beep(f, 0.4, 'sine', 0.10, i*0.22));
-}
+    // キャンバスにルーレットを描画する関数
+    function drawWheel(angle) {
+        ctx.clearRect(0, 0, size, size);
+        segments.forEach((seg, i) => {
+            const startAngle = i * radPerSeg + angle - Math.PI / 2;
+            const endAngle = startAngle + radPerSeg;
+            
+            // 扇形を描画
+            ctx.beginPath();
+            ctx.moveTo(center, center);
+            ctx.arc(center, center, center - 5, startAngle, endAngle);
+            ctx.closePath();
+            ctx.fillStyle = seg.color;
+            ctx.fill();
+            ctx.strokeStyle = "#ffffff";
+            ctx.lineWidth = 2;
+            ctx.stroke();
 
-/* ===================== ルーレット盤面構築 ===================== */
-const wheelEl = document.getElementById('wheel');
-function buildWheel(){
-  const gradParts = SEGMENTS.map((s,i)=>{
-    const start = i*SEG_ANGLE, end=(i+1)*SEG_ANGLE;
-    return `${s.color} ${start}deg ${end}deg`;
-  }).join(', ');
-  wheelEl.style.background = `conic-gradient(${gradParts})`;
+            // テキストを描画
+            ctx.save();
+            ctx.translate(center, center);
+            ctx.rotate(startAngle + radPerSeg / 2);
+            ctx.textAlign = "right";
+            ctx.fillStyle = "#2c3e50";
+            ctx.font = "bold 16px Arial";
+            ctx.fillText(seg.label, center - 20, 6);
+            ctx.restore();
+        });
 
-  SEGMENTS.forEach((s,i)=>{
-    const label = document.createElement('div');
-    label.className = 'seg-label';
-    label.innerHTML = `<span class="ic">${s.icon}</span>`;
-    const angle = i*SEG_ANGLE + SEG_ANGLE/2;
-    label.style.transform = `rotate(${angle}deg) translateY(var(--outer-r))`;
-    wheelEl.appendChild(label);
-  });
-}
-buildWheel();
-
-/* ===================== 紙吹雪エフェクト ===================== */
-const fxLayer = document.getElementById('fx-layer');
-function burstConfetti(count, emojis){
-  for(let i=0;i<count;i++){
-    const el = document.createElement('div');
-    el.className = 'confetti';
-    el.textContent = emojis[Math.floor(Math.random()*emojis.length)];
-    el.style.left = (Math.random()*100)+'%';
-    const dur = 1.6 + Math.random()*1.4;
-    el.style.animationDuration = dur+'s';
-    el.style.animationDelay = (Math.random()*0.4)+'s';
-    el.style.fontSize = (16+Math.random()*18)+'px';
-    fxLayer.appendChild(el);
-    setTimeout(()=> el.remove(), (dur+0.4)*1000 + 400);
-  }
-}
-
-/* ===================== QRスキャナー ===================== */
-let html5QrCode = null;
-let scanning = false;
-
-function startScanner(){
-  document.getElementById('scan-error').classList.remove('show');
-  showScreen('screen-scan');
-  if(!html5QrCode){
-    html5QrCode = new Html5Qrcode("reader");
-  }
-  if(scanning) return;
-  scanning = true;
-  html5QrCode.start(
-    { facingMode: "environment" },
-    { fps: 10, qrbox: 220 },
-    onScanSuccess,
-    ()=>{ /* 読み取り中の失敗は無視 */ }
-  ).catch(()=>{
-    scanning = false;
-  });
-}
-
-function stopScanner(){
-  if(html5QrCode && scanning){
-    html5QrCode.stop().then(()=>{ scanning = false; }).catch(()=>{ scanning = false; });
-  }
-}
-
-function onScanSuccess(decodedText){
-  const code = decodedText.trim().toUpperCase();
-  const entry = QR_MAP[code];
-  if(!entry){
-    document.getElementById('scan-error').classList.add('show');
-    return;
-  }
-  stopScanner();
-  document.getElementById('scan-error').classList.remove('show');
-  currentEntry = entry;
-  showScreen('screen-roulette');
-  startSpin();
-}
-
-/* ===================== ルーレット回転ロジック ===================== */
-let currentEntry = null;
-let currentAngle = 0;
-let spinRAF = null;
-let tickTimer = null;
-let stopped = true;
-
-const btnStop = document.getElementById('btn-stop');
-const tickCaption = document.getElementById('tick-caption');
-
-function startSpin(){
-  currentAngle = 0;
-  wheelEl.style.transition = 'none';
-  wheelEl.style.transform = 'rotate(0deg)';
-  btnStop.disabled = false;
-  tickCaption.textContent = 'カタカタカタカタ……';
-  stopped = false;
-
-  const speed = 26; // deg / frame（高速回転）
-  function frame(){
-    if(stopped) return;
-    currentAngle += speed;
-    wheelEl.style.transform = `rotate(${currentAngle}deg)`;
-    spinRAF = requestAnimationFrame(frame);
-  }
-  spinRAF = requestAnimationFrame(frame);
-
-  tickTimer = setInterval(playTick, 70);
-}
-
-function stopSpinLoop(){
-  stopped = true;
-  if(spinRAF) cancelAnimationFrame(spinRAF);
-  if(tickTimer) clearInterval(tickTimer);
-}
-
-function easeOutCubic(t){ return 1 - Math.pow(1-t, 3); }
-function easeInOutQuad(t){ return t<0.5 ? 2*t*t : 1-Math.pow(-2*t+2,2)/2; }
-
-function animateAngle(from, to, duration, easing, onTick, onDone){
-  const start = performance.now();
-  function step(now){
-    const elapsed = now - start;
-    const t = Math.min(elapsed/duration, 1);
-    const eased = easing(t);
-    const angle = from + (to-from)*eased;
-    wheelEl.style.transform = `rotate(${angle}deg)`;
-    if(onTick) onTick(t, elapsed);
-    if(t < 1){
-      requestAnimationFrame(step);
-    } else if(onDone){
-      onDone();
+        // 中央の円形飾り
+        ctx.beginPath();
+        ctx.arc(center, center, 20, 0, 2 * Math.PI);
+        ctx.fillStyle = "#ffffff";
+        ctx.fill();
+        ctx.strokeStyle = "#cbd5e1";
+        ctx.stroke();
     }
-  }
-  requestAnimationFrame(step);
-}
 
-btnStop.addEventListener('click', ()=>{
-  if(stopped) return;
-  btnStop.disabled = true;
-  stopSpinLoop();
-  playStopClick();
-  runDeceleration();
-});
-
-function runDeceleration(){
-  const seg = currentEntry.seg;
-  // 盤面の該当マスが上(ポインター位置)にくる回転角(mod360)
-  const targetMod = (360 - seg*SEG_ANGLE) % 360;
-  const spins = 6; // 余分な回転数
-  const finalAngle = Math.ceil(currentAngle/360)*360 + spins*360 + targetMod;
-  const phaseAAngle = finalAngle - SEG_ANGLE/2; // 半マス手前で「止まりそう」になる
-
-  tickCaption.textContent = 'カタカタカタ……';
-
-  // 減速に合わせてティック音の間隔を徐々に伸ばす
-  let tickDelay = 90;
-  let tickTimeoutId = null;
-  function scheduleTick(){
-    playTick();
-    tickDelay *= 1.16;
-    if(tickDelay < 900){
-      tickTimeoutId = setTimeout(scheduleTick, tickDelay);
+    // 文字列を数値（ハッシュ値）に変換する関数 (同じ文字なら必ず同じ数を返す)
+    function hashCode(str) {
+        let hash = 0;
+        for (let i = 0; i < str.length; i++) {
+            hash = str.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return Math.abs(hash);
     }
-  }
-  scheduleTick();
 
-  animateAngle(currentAngle, phaseAAngle, 3800, easeOutCubic,
-    (t)=>{
-      if(t>0.55 && t<0.7) tickCaption.textContent = 'カタ……カタ……';
-      if(t>=0.85) tickCaption.textContent = 'カタ……';
-    },
-    ()=>{
-      clearTimeout(tickTimeoutId);
-      currentAngle = phaseAAngle;
-      tickCaption.textContent = '……';
-      // STEP5: 止まりそうで止まらない・少し間を置く
-      setTimeout(()=>{
-        playFinalClack();
-        tickCaption.textContent = 'カッ……';
-        animateAngle(currentAngle, finalAngle, 650, easeInOutQuad,
-          null,
-          ()=>{
-            currentAngle = finalAngle;
-            tickCaption.textContent = 'ピタッ！';
-            playPita();
-            setTimeout(()=> revealResult(seg), 450);
-          }
-        );
-      }, 550);
+    // 初期化と自動スタート処理
+    // URLのパラメータから id を取得 (?id=xxxxx)
+    const urlParams = new URLSearchParams(window.location.search);
+    const qrId = urlParams.get('id');
+
+    if (qrId) {
+        urlDisplay.innerText = `読み込み成功 (ID: ${qrId})`;
+        // 自動で高速回転をスタート
+        isSpinning = true;
+        speed = 0.4; // 高速回転の速度
+        actionBtn.disabled = false;
+        actionBtn.classList.add("stop-mode");
+        actionBtn.innerText = "STOP";
+    } else {
+        urlDisplay.innerHTML = `<span style="color: #e74c3c; font-weight:bold;">⚠️ URLに ?id=xxx をつけてアクセスしてください</span>`;
+        drawWheel(0);
     }
-  );
-}
 
-/* ===================== 結果画面 ===================== */
-const resScreen = document.getElementById('screen-result');
-const resIcon = document.getElementById('result-icon');
-const resTitle = document.getElementById('result-title');
-const resSub = document.getElementById('result-sub');
-const resNote = document.getElementById('result-note');
+    // ルーレットのメインループ
+    function update() {
+        if (!isSpinning) return;
 
-function revealResult(segIndex){
-  const seg = SEGMENTS[segIndex];
-  resScreen.classList.remove('win','lose','shake','flash-dark');
+        if (!isStopping) {
+            // 普通に一定速度で回転中
+            currentAngle += speed;
+        } else {
+            // STOPボタンが押された後の滑らかな減速（イージング処理）
+            stopProgress++;
+            const t = stopProgress / duration;
+            
+            // イージング関数 (Cubic Out): 最初は速く、後半にかけて滑らかに超減速
+            const easeOutCubic = 1 - Math.pow(1 - t, 3);
+            
+            // 現在の角度を決定的な目標角度に向けて補間
+            currentAngle = startAngleAtStop + (targetAngle - startAngleAtStop) * easeOutCubic;
 
-  if(seg.win){
-    resScreen.classList.add('win');
-    resIcon.textContent = '🎉';
-    resTitle.textContent = 'あたり！';
-    resSub.textContent = currentEntry.sub;
-    resNote.textContent = currentEntry.note;
-    showScreen('screen-result');
-    playFanfare();
-    burstConfetti(28, ['🎉','🎀','⭐','🌸','🍓','✨']);
-  } else {
-    resIcon.textContent = '😈';
-    resTitle.textContent = 'ざんねん……';
-    resSub.textContent = 'プレゼントは……';
-    resNote.textContent = 'ない……👻';
-    showScreen('screen-result');
-    resScreen.classList.add('lose');
-    playScary();
-    requestAnimationFrame(()=>{
-      resScreen.classList.add('shake','flash-dark');
+            if (stopProgress >= duration) {
+                // 完全に停止
+                isSpinning = false;
+                isStopping = false;
+                currentAngle = targetAngle; // 完全に目標値に合わせる
+                showResult();
+            }
+        }
+
+        // 360度の範囲に収める
+        currentAngle = currentAngle % (2 * Math.PI);
+        drawWheel(currentAngle);
+        requestAnimationFrame(update);
+    }
+
+    let startAngleAtStop = 0;
+
+    // STOPボタンが押された時の処理
+    actionBtn.addEventListener("click", () => {
+        if (!isSpinning || isStopping) return;
+
+        actionBtn.disabled = true; // 連続押し防止
+        actionBtn.innerText = "減速中...";
+        actionBtn.classList.remove("stop-mode");
+
+        // QRのIDを元に、どのセグメントで止めるかを「完全に固定」する
+        const hash = hashCode(qrId);
+        const targetSegmentIndex = hash % segments.length;
+
+        // 的（12時方向 = -Math.PI/2）に選ばれたセグメントの中心が来るように調整
+        // セグメントiの中心角度 = i * radPerSeg + radPerSeg / 2
+        // 針を指すための補正を含めた停止時のベース角度を計算
+        const targetBaseAngle = (2 * Math.PI) - (targetSegmentIndex * radPerSeg + radPerSeg / 2);
+        
+        startAngleAtStop = currentAngle;
+
+        // 「十分な時間をかけて徐々に減速」させるため、最低でも数回転(例: 5回転 = 10*Math.PI)させてから止める
+        const extraRotations = 4 * 2 * Math.PI; 
+        
+        // 最終的な着地角度を決定
+        targetAngle = startAngleAtStop + extraRotations + ((targetBaseAngle - (startAngleAtStop % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI));
+        
+        isStopping = true;
+        stopProgress = 0;
     });
-    setTimeout(()=> resScreen.classList.remove('shake'), 600);
-  }
-}
 
-/* ===================== ボタン類 ===================== */
-document.getElementById('btn-start').addEventListener('click', ()=>{
-  ensureAudio();
-  startScanner();
-});
+    // 結果表示
+    function showResult() {
+        // 現在の角度から真上(12時方向)にあるセグメントを逆算
+        const normalizedAngle = (2 * Math.PI - currentAngle) % (2 * Math.PI);
+        const index = Math.floor(normalizedAngle / radPerSeg) % segments.length;
+        const result = segments[index];
+        
+        resultDiv.innerText = `結果: 🎉 【${result.label}】`;
+        actionBtn.innerText = "終了";
+    </div>
 
-document.getElementById('btn-again').addEventListener('click', ()=>{
-  startScanner();
-});
-
-document.getElementById('btn-tofinal').addEventListener('click', ()=>{
-  showScreen('screen-final');
-  playChime();
-  burstConfetti(24, ['🌸','🎀','✨','⭐','🎂']);
-});
+    // 自動実行ループの開始
+    if (isSpinning) {
+        requestAnimationFrame(update);
+    }
 </script>
+
 </body>
 </html>
